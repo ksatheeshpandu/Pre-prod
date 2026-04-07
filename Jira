@@ -1,0 +1,38 @@
+import requests
+from datetime import datetime, timedelta
+
+# Jira / Atlassian details
+ORG_ID = "your_org_id"
+API_TOKEN = "your_api_token"
+EMAIL = "your_email"
+
+# Headers
+headers = {
+    "Authorization": f"Basic {EMAIL}:{API_TOKEN}",
+    "Accept": "application/json"
+}
+
+# Get all users (Atlassian Admin API)
+url = f"https://api.atlassian.com/admin/v1/orgs/{ORG_ID}/users"
+
+response = requests.get(url, headers=headers)
+users = response.json().get("data", [])
+
+# Define inactive threshold (60 days)
+inactive_days = 60
+threshold_date = datetime.utcnow() - timedelta(days=inactive_days)
+
+for user in users:
+    account_id = user.get("account_id")
+    last_active = user.get("last_active")  # may vary
+
+    if last_active:
+        last_active_date = datetime.strptime(last_active, "%Y-%m-%dT%H:%M:%S.%fZ")
+
+        if last_active_date < threshold_date:
+            print(f"Deactivating user: {account_id}")
+
+            # Deactivate user
+            deactivate_url = f"https://api.atlassian.com/admin/v1/orgs/{ORG_ID}/users/{account_id}/lifecycle/disable"
+
+            requests.post(deactivate_url, headers=headers)
